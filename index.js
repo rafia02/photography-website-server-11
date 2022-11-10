@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express()
@@ -19,11 +20,46 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 
 
+function verify(req, res, next){
+    const justify = req.headers.authorization 
+    if(!justify){
+        return res.status(401).send({message: 'unothoraize access'})
+     }
+
+     const token = justify.split(' ')[1]
+
+     jwt.verify(token, process.env.ACCESS_TOKEN, function(err, decoded){
+        if(err){
+           return res.status(404).send({message: 'unauthorize access'})
+        }
+        req.decoded = decoded
+        next()
+       })
+}
+
+
+
+
+
 async function run(){
     try{
         const serviceCollection = client.db('photography').collection('services')
         const reviewCollection = client.db('photography').collection('reviews')
         const addServiceCollection = client.db('photography').collection('newservice')
+
+
+
+
+        app.post('/jwt', (req, res)=>{
+            const user = req.body 
+            console.log(user)
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN, {expiresIn: '1h'})
+            res.send({token})
+        })
+
+
+
+
         app.get('/services', async (req, res)=>{
             const query = {}
             const cursor = serviceCollection.find(query)
@@ -42,7 +78,16 @@ async function run(){
 
 
 
-        app.get('/reviews', async(req, res)=>{
+        app.get('/reviews', verify, async(req, res)=>{
+            const decoded = req.decoded
+            console.log(decoded)
+
+            if(decoded.email !== req.query.email){
+                return res.status(402).send({message: 'unauthorize access'})
+
+           }
+
+
             // console.log(req.query)
             let query = {}
             if(req.query.email){
