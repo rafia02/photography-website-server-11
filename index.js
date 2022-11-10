@@ -130,7 +130,7 @@ async function run(){
             const id = req.params.id 
             const query = {service_id: id }
             const cursor =  reviewCollection.find(query)
-            const result = await cursor.toArray()
+            const result = await (cursor.toArray()).reverse()
             res.send(result)
         })
 
